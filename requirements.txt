@@ -1,0 +1,10 @@
+Flask
+flask-cors
+torch
+torchvision
+Pillow
+matplotlib
+gunicorn
+numpy
+opencv-python
+azure-storage-blob

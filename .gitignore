@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# macOS files
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model and log files
+*.pth
+*.pt
+*.log
+
+# Local config / secrets
+*.env
+*.secret
+.env.*
+
+# Pytest and coverage
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Docker
+*.pid
+*.tar
+*.bak
+*.swp
+.dockerignore
+
+# VS Code and IDEs
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# System files
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
