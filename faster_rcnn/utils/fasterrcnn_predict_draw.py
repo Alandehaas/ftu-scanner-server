@@ -49,7 +49,7 @@ LABEL_MESSAGES = {
 }
 
 def load_fasterrcnn_model(num_classes=91):
-    connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+    connect_str = 'DefaultEndpointsProtocol=https;AccountName=ftuscannerstorageacc;AccountKey=/ROkqmRf0KP6I/NcpEBLDJn1axLIn01+Cu+ZOTI8dXphbiyKdmnsCiNPHtGksIvixznZB2Fxgg0P+AStlpPb5g==;EndpointSuffix=core.windows.net'
     container_name = 'models'
     blob_name = 'fasterrcnnmodified.pth'
 

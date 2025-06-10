@@ -8,3 +8,5 @@ gunicorn
 numpy
 opencv-python
 azure-storage-blob
+flask-cors
+opencv-python-headless

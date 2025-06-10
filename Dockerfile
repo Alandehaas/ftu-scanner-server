@@ -1,11 +1,9 @@
-# Use official Python image
 FROM python:3.10-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies and OpenCV dependencies
+# Install system and OpenCV dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -16,19 +14,17 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install OpenCV separately (important due to pip issues)
+# Install OpenCV and Flask/Gunicorn
 RUN pip install opencv-python-headless
 
-# Set work directory inside container
 WORKDIR /app
-
-# Copy all project files into the container
 COPY . /app/
 
-# Install Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Default command to run your FastAPI or Flask app
-CMD ["python", "-m", "api.main"]
+# EXPOSE the port Flask will run on
+EXPOSE 5000
 
+# Production-grade CMD using Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "api.main:app"]
