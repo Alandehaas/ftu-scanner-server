@@ -173,3 +173,13 @@ def fused_label_check_route():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@routes.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok"}), 200
+@routes.route('/status', methods=['GET'])
+def status_check():
+    return jsonify({
+        "fasterrcnn": "loaded",
+        "resnet50": "loaded"
+    }), 200
