@@ -28,3 +28,4 @@ EXPOSE 5000
 
 # Production-grade CMD using Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "api.main:app"]
+

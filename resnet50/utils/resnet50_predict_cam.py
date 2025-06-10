@@ -12,7 +12,7 @@ CLASS_NAMES = ['correct', 'incorrect']
 NUM_CLASSES = len(CLASS_NAMES)
 
 def load_resnet_model():
-    connect_str = 'DefaultEndpointsProtocol=https;AccountName=ftuscannerstorageacc;AccountKey=/ROkqmRf0KP6I/NcpEBLDJn1axLIn01+Cu+ZOTI8dXphbiyKdmnsCiNPHtGksIvixznZB2Fxgg0P+AStlpPb5g==;EndpointSuffix=core.windows.net'
+    connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
     container_name = 'models'
     blob_name = 'resnet50.pth'
 

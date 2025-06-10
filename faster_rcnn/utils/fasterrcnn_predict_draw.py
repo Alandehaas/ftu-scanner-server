@@ -25,31 +25,8 @@ CUSTOM_CATEGORY_NAMES = [
     "Heating element"
 ]
 
-LABEL_MESSAGES = {
-    1: {
-        "object": "FTU",
-        "message": "FTU itself is wrongly placed in general"
-    },
-    3: {
-        "object": "cable (left positioning)",
-        "message": "The cable must enter from the left side of the FTU to ensure the original design and proper routing are preserved. | The cable must go straight down for at least 20 cm below the FTU to leave room for the device that connects from underneath."
-    },
-    4: {
-        "object": "screw",
-        "message": "Screws should be placed at least 20 cm below the FTU, with the cable running straight and securely fastened above them."
-    },
-    5: {
-        "object": "energy box",
-        "message": "The FTU must not be installed directly beside an energy box. Leave sufficient space for other home installations such as breakers, meters, or distribution boards."
-    },
-    6: {
-        "object": "heating element",
-        "message": "The FTU should not be installed near heat sources (e.g., radiators or hot water pipes), as heat can degrade the signal quality."
-    }
-}
-
 def load_fasterrcnn_model(num_classes=91):
-    connect_str = 'DefaultEndpointsProtocol=https;AccountName=ftuscannerstorageacc;AccountKey=/ROkqmRf0KP6I/NcpEBLDJn1axLIn01+Cu+ZOTI8dXphbiyKdmnsCiNPHtGksIvixznZB2Fxgg0P+AStlpPb5g==;EndpointSuffix=core.windows.net'
+    connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
     container_name = 'models'
     blob_name = 'fasterrcnnmodified.pth'
 
@@ -115,7 +92,6 @@ def draw_fasterrcnn_boxes_on_image(image_bytes, predictions, focus_boxes=None, c
     fig, ax = plt.subplots(1, figsize=(10, 10))
     ax.imshow(image)
 
-    # Draw border around full image
     border_color = 'green' if classification_label == 'correct' else 'red'
     img_width, img_height = image.size
     border_rect = patches.Rectangle(
@@ -124,7 +100,6 @@ def draw_fasterrcnn_boxes_on_image(image_bytes, predictions, focus_boxes=None, c
     )
     ax.add_patch(border_rect)
 
-    # Identify top predictions
     sorted_preds = sorted(predictions, key=lambda x: x['score'], reverse=True)
     high_confidence = [p for p in sorted_preds if p['score'] >= 0.9]
     if len(high_confidence) >= 3:
@@ -134,39 +109,28 @@ def draw_fasterrcnn_boxes_on_image(image_bytes, predictions, focus_boxes=None, c
 
     for pred in predictions:
         xmin, ymin, xmax, ymax = pred["box"]
-        box_color = 'lime'
         label_id = pred["label"]
         label_name = CUSTOM_CATEGORY_NAMES[label_id]
 
-        # Determine box color
-        if classification_label == "correct" and box_contains_reddish_pixels(image, pred["box"]):
-            box_color = 'green'
-        elif classification_label == "incorrect" and box_contains_reddish_pixels(image, pred["box"]):
-            box_color = 'red'
-        elif pred in top_preds:
-            box_color = 'blue'
+        box_color = None
 
-        # Optionally highlight focus
-        if classification_label == "incorrect" and focus_boxes:
-            if is_box_inside_any_focus(pred["box"], focus_boxes, iou_threshold=0.04):
-                box_color = 'red'
+        if pred in top_preds:
+            if focus_boxes and is_box_inside_any_focus(pred["box"], focus_boxes, iou_threshold=0.04):
+                if classification_label == "correct":
+                    box_color = 'green'
+                else:
+                    box_color = 'red'
+            else:
+                box_color = 'blue'
+        else:
+            continue  
 
-        # Draw box
         rect = patches.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
                                  linewidth=2, edgecolor=box_color, facecolor='none')
         ax.add_patch(rect)
 
-        # Draw label
         ax.text(xmin, ymin - 5, label_name,
                 color=box_color, fontsize=12, weight='bold')
-
-        # Draw PvE message if applicable
-        if box_color in ["green", "red"] and label_id in LABEL_MESSAGES:
-            message = LABEL_MESSAGES[label_id]["message"]
-            wrapped = "\n".join([message[i:i + 60]
-                                for i in range(0, len(message), 60)])
-            ax.text(xmin, ymax + 5, wrapped,
-                    color=box_color, fontsize=8, verticalalignment='top')
 
     plt.axis("off")
     buf = BytesIO()
