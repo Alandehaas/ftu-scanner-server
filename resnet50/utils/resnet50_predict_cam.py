@@ -12,29 +12,22 @@ CLASS_NAMES = ['correct', 'incorrect']
 NUM_CLASSES = len(CLASS_NAMES)
 
 def load_resnet_model():
-    connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-    container_name = 'models'
-    blob_name = 'resnet50.pth'
+    # Relative to where main.py is executed from (kpn/)
+    model_path = "resnet50/models/resnet50.pth"
 
-    if not all([connect_str, container_name, blob_name]):
-        raise EnvironmentError("One or more Azure storage environment variables are not set.")
-
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_container_client(container_name).get_blob_client(blob_name)
-
-    tmp_model_path = os.path.join("/tmp", "resnet50.pth")
-    with open(tmp_model_path, "wb") as f:
-        f.write(blob_client.download_blob().readall())
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
 
     model = models.resnet50(weights=None)
     num_ftrs = model.fc.in_features
     model.fc = torch.nn.Linear(num_ftrs, NUM_CLASSES)
 
-    model.load_state_dict(torch.load(tmp_model_path, map_location=DEVICE))
+    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
 
     return model
+
 
 def transform_image(image):
     transform = transforms.Compose([
@@ -46,6 +39,7 @@ def transform_image(image):
     ])
     return transform(image).unsqueeze(0)
 
+
 def predict_resnet(model, image_bytes):
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
     input_tensor = transform_image(image).to(DEVICE)
@@ -55,10 +49,11 @@ def predict_resnet(model, image_bytes):
         _, predicted = torch.max(outputs, 1)
         return CLASS_NAMES[predicted.item()]
 
+
 def draw_resnet_cam(model, image_bytes, prediction_label):
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
     input_tensor = transform_image(image).to(DEVICE)
-    
+
     gradients = []
     activations = []
 
@@ -85,7 +80,8 @@ def draw_resnet_cam(model, image_bytes, prediction_label):
     B, C, H, W = grads.shape
     alpha_num = grads.pow(2)
     alpha_denom = grads.pow(2) * 2 + acts * grads.pow(3)
-    alpha_denom = torch.where(alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
+    alpha_denom = torch.where(
+        alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
     alphas = alpha_num / alpha_denom
     weights = (alphas * torch.relu(grads)).sum(dim=(2, 3))
     saliency_map = (weights[:, :, None, None] * acts).sum(dim=1).squeeze()
@@ -100,7 +96,8 @@ def draw_resnet_cam(model, image_bytes, prediction_label):
     heatmap_uint8 = np.uint8(255 * heatmap_resized)
     heatmap_colored = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_INFERNO)
     original_img = np.array(image)
-    superimposed_img = cv2.addWeighted(original_img, 0.6, heatmap_colored, 0.4, 0)
+    superimposed_img = cv2.addWeighted(
+        original_img, 0.6, heatmap_colored, 0.4, 0)
 
     result_img = Image.fromarray(superimposed_img)
     buffer = BytesIO()
@@ -109,16 +106,19 @@ def draw_resnet_cam(model, image_bytes, prediction_label):
 
     return buffer, focus_boxes
 
+
 def get_all_focus_boxes(heatmap_np, threshold_percentile=90):
     threshold_value = np.percentile(heatmap_np, threshold_percentile)
     mask = np.uint8(heatmap_np >= threshold_value) * 255
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     boxes = []
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
         boxes.append([x, y, x + w, y + h])
     return boxes
+
 
 def compute_iou(box1, box2):
     x1 = max(box1[0], box2[0])
@@ -135,6 +135,7 @@ def compute_iou(box1, box2):
         return 0
     return intersection / union
 
+
 def is_box_inside_any_focus(pred_box, focus_boxes, iou_threshold=0.1):
     for focus_box in focus_boxes:
         iou = compute_iou(pred_box, focus_box)
@@ -150,6 +151,7 @@ def is_box_inside_focus(pred_box, focus_box):
     y_center = (pred_box[1] + pred_box[3]) / 2
     fxmin, fymin, fxmax, fymax = focus_box
     return fxmin <= x_center <= fxmax and fymin <= y_center <= fymax
+
 
 def get_focus_box_from_cam(model, image_bytes, prediction_label):
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
@@ -181,7 +183,8 @@ def get_focus_box_from_cam(model, image_bytes, prediction_label):
     B, C, H, W = grads.shape
     alpha_num = grads.pow(2)
     alpha_denom = grads.pow(2) * 2 + acts * grads.pow(3)
-    alpha_denom = torch.where(alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
+    alpha_denom = torch.where(
+        alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
     alphas = alpha_num / alpha_denom
     weights = (alphas * torch.relu(grads)).sum(dim=(2, 3))
     saliency_map = (weights[:, :, None, None] * acts).sum(dim=1).squeeze()

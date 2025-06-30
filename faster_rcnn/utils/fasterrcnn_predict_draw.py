@@ -26,31 +26,21 @@ CUSTOM_CATEGORY_NAMES = [
 ]
 
 def load_fasterrcnn_model(num_classes=91):
-    connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-    container_name = 'models'
-    blob_name = 'fasterrcnnmodified.pth'
+    # Relative to the working directory (e.g., kpn/)
+    model_path = "faster_rcnn/models/fasterrcnnmodified.pth"
 
-    if not all([connect_str, container_name, blob_name]):
-        raise EnvironmentError("One or more Azure storage environment variables are not set.")
-
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_container_client(container_name).get_blob_client(blob_name)
-
-    tmp_model_path = os.path.join("/tmp", "fasterrcnnmodified.pth")
-    with open(tmp_model_path, "wb") as f:
-        f.write(blob_client.download_blob().readall())
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
 
     model = fasterrcnn_resnet50_fpn(weights=None)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
-    model.load_state_dict(torch.load(tmp_model_path, map_location=device))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
 
     return model
-
-
 
 def predict_fasterrcnn(model, image_bytes, threshold=0.9):
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
